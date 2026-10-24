@@ -2,6 +2,17 @@
 
 > An AI teleprompter for smart glasses: turns rough talk notes (and optionally a slide photo) into a speaking script that fits your time slot, split into short cues for the lens, so speakers keep eye contact instead of looking down at their notes.
 
+**Quick start** (no glasses needed):
+```bash
+cd agents/glasses-speaker-cue-agent
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env                 # then set GOOGLE_API_KEY in .env
+python main.py --notes examples/notes.txt --minutes 1     # writes out/script.md + out/deck.json
+python glasses_preview.py out/deck.json                   # step through the cues: Enter/→ next, ← back, q quit
+```
+To present from Meta Ray-Ban Display with the Neural Band, see [Full working flow with Meta glasses](#full-working-flow-with-meta-glasses).
+
 ---
 
 ## Overview
@@ -152,7 +163,10 @@ Exit codes: `0` success, `2` invalid input or missing config, `3` blocked by a g
 ```bash
 python server.py                   # http://127.0.0.1:8080, this machine only
 python server.py --host 0.0.0.0    # reachable from a phone on the same network
+python server.py --port 9000       # different port (default 8080)
 ```
+The server needs `AGENT_TOKEN` in `.env` and refuses to start without it.
+
 `POST /v1/script` with header `X-Agent-Token` and JSON `{"notes": "...", "durationSeconds": 60, "language": "en", "includeQa": true}` returns the same `deck.json` as the CLI. `GET /healthz` returns `{"ok": true}`.
 
 | Status | Meaning |
@@ -165,6 +179,7 @@ python server.py --host 0.0.0.0    # reachable from a phone on the same network
 | `422` | Blocked by a guardrail (e.g. a secret in the notes); nothing was sent to Gemini |
 | `422` (schema) | `durationSeconds` outside 30–1800, or malformed JSON |
 | `429` | Gemini rate limit or overload, or the server is already handling 2 requests |
+| `500` | The server's own config is missing (e.g. `GOOGLE_API_KEY`) |
 | `502` | Gemini error or unusable model reply |
 
 ### Full working flow with Meta glasses
